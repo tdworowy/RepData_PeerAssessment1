@@ -8,18 +8,108 @@ output:
 
 ## Loading and preprocessing the data
 
-
+```{r, load data}
+unzip("activity.zip")
+data <- read.csv("activity.csv")
+data$date <- as.Date(data$date, "%Y-%m-%d")
+```
 
 ## What is mean total number of steps taken per day?
+```{r, load ggplot2}
+library(ggplot2)
+```
+```{r, steps historgram}
+steps_per_day <- aggregate(steps ~ date, data, sum, na.rm = TRUE)
+ggplot(steps_per_day, aes(steps)) + 
+  geom_histogram(fill="blue",binwidth=800) +
+  ggtitle("Steps per day") + 
+  theme_dark()
+  
+```
 
-
+Mean of steps per day: 
+```{r, steps mean}
+mean(steps_per_day$steps, ra.rm=TRUE)  
+```
+Median of steps per day: 
+```{r, steps median} 
+median(steps_per_day$steps, ra.rm=TRUE)
+```
 
 ## What is the average daily activity pattern?
+```{r, daily_pattern}
+pattern <- aggregate(steps~interval, data, mean, na.rm = TRUE)
+ggplot(pattern, aes(x=interval,y=steps)) + 
+  geom_line(col="blue") + 
+  ggtitle("Average daily activity pattern") + 
+  theme_dark()
+  
+```
 
+5-min time Interval with maximum average steps taken per day:
+
+```{r Max Avg Daily Number of Steps}
+pattern$interval[pattern$steps == max(pattern$steps)]
+
+```
 
 
 ## Imputing missing values
+Total number of missing values:
+```{r total NAs}
+sum(is.na(data))
+```
+Imputing missing values:
+```{r imput missing data}
+new_data <- data
+sapply(unique(data$interval),
+       function(x)
+         new_data[!complete.cases(new_data) & (new_data$interval == x),1] <<- pattern$steps[pattern$interval == x])
+```
 
+```{r, steps historgram with artifical data}
+steps_per_day <- aggregate(steps ~ date, new_data, sum)
+ggplot(steps_per_day, aes(steps)) + 
+  geom_histogram(fill="blue",binwidth=800) +
+  ggtitle("Steps per day with artifical data") + 
+  theme_dark()
+  
+```
 
+Mean of steps per day: 
+```{r, steps mean with artifical data}
+mean(steps_per_day$steps)  
+```
+Median of steps per day: 
+```{r, steps median with artifical data} 
+median(steps_per_day$steps)
+```
 
 ## Are there differences in activity patterns between weekdays and weekends?
+```{r, add day} 
+new_data$weekday <- weekdays(new_data$date)
+```
+```{r, load cowplot,message=FALSE}
+library(cowplot)
+```
+
+```{r, weekday amd weekend patterns}
+new_data_weekday = subset(new_data, weekday %in% c("Monday","Tuesday","Wednesday","Thursday","Friday"))
+pattern <- aggregate(steps~interval, new_data_weekday, mean, na.rm = TRUE)
+weekday <- ggplot(pattern, aes(x=interval,y=steps)) + 
+    geom_line(col="blue") + 
+    ggtitle("Avg activity pattern on weekday") + 
+    theme_dark()
+
+new_data_weekend = subset(new_data, weekday %in% c("Saturday", "Sunday") )
+pattern <- aggregate(steps~interval, new_data_weekend, mean, na.rm = TRUE)
+weekend <-ggplot(pattern, aes(x=interval,y=steps)) + 
+    geom_line(col="blue") + 
+    ggtitle("Avg activity pattern on weekend") + 
+    theme_dark()
+
+plot_grid(weekday,weekend)
+    
+```
+
+
